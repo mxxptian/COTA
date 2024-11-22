@@ -18,9 +18,5 @@ install.packages(c('qvalue', 'data.table', 'stringr', 'tidyr', 'AnnotationDbi', 
 ``` r
 devtools::install_github("mxxptian/COTA")
 ```
-Or you can also install by the source file:
 
-``` r
-install.packages("path/COTA_0.1.0.tar.gz", repos=NULL)
-```
 
