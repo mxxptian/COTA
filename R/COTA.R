@@ -179,7 +179,7 @@ med_gene <- function(p.trans, p.wgs, ref.table, candidate, target.fdr=0.1, dist=
 
 
 
-calc_pair.snp <- function(mat.sig, mat.p, p.wgs, gene1, uniq_snp, ref.table.keep, eta.wgs=1e-5, GRCh = '17'){
+calc_pair.snp <- function(mat.sig, mat.p, p.wgs, gene1, uniq_snp, ref.table.keep, eta.wgs=1e-5, GRCh = NULL){
 
   # mat.sig: matrix encoding significant pair, output by med_gene()
   # mat.p: matrix encoding COTA P-values, output by med_gene()
