@@ -1,6 +1,6 @@
 # COTA
 
-`COTA` is an R package to identify candidate core disease genes ssing trans-regulatory effects.
+`COTA` is an R package to identify candidate core disease genes using trans-regulatory effects.
 
 # Installation
 
