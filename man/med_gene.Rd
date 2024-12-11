@@ -4,7 +4,16 @@
 \alias{med_gene}
 \title{Apply COTA to identify candidate core genes.}
 \usage{
-med_gene(p.trans, p.wgs, ref.table, candidate, target.fdr = 0.1, dist = 5e+06)
+med_gene(
+  p.trans,
+  p.wgs,
+  ref.table,
+  candidate,
+  target.fdr = 0.1,
+  dist = 5e+06,
+  gene1.type = c("SNP", "Gene"),
+  SNP.ref = NULL
+)
 }
 \arguments{
 \item{p.trans}{p value for trans genes. M*N dim matrix. There are M rows for gene 2. N columns for gene 1. Each entry is the p-value of gene 1 -> gene 2.}
@@ -18,6 +27,14 @@ med_gene(p.trans, p.wgs, ref.table, candidate, target.fdr = 0.1, dist = 5e+06)
 \item{target.fdr}{the pre-defined FDR level in the BH step, the default value is 0.1.}
 
 \item{dist}{the distant between the gene and trans-genes, the default value is 5e6}
+
+\item{gene1.type}{specify the exposure type. The expousre can be SNP, or Gene.}
+
+\item{SNP.ref}{reference data for position information if the exposure is 'SNP'
+shoud contain three columns:
+1. SNP: rsid
+2. SNPPos: position of SNP
+3. SNPChr: '1'}
 }
 \value{
 A list of candidate genes 1, identified pair matrix, and COTA's p-values

@@ -7,18 +7,24 @@
 # should contain five columns:
 # 1. gene_name: gene name
 # 2. type: gene type
-# 3. Chromosome
+# 3. Chromosome: 'chr1'
 # 4. start: start position of gene
 # 5. end: end position of gene
 #' @param target.fdr the pre-defined FDR level in the BH step, the default value is 0.1.
 #' @param dist the distant between the gene and trans-genes, the default value is 5e6
+#' @param gene1.type specify the exposure type. The expousre can be SNP, or Gene.
+#' @param SNP.ref reference data for position information if the exposure is 'SNP'
+#' shoud contain three columns:
+#' 1. SNP: rsid
+#' 2. SNPPos: position of SNP
+#' 3. SNPChr: '1'
 #'
 #' @return A list of candidate genes 1, identified pair matrix, and COTA's p-values
 #' @export
 
 
 
-med_gene <- function(p.trans, p.wgs, ref.table, candidate, target.fdr=0.1, dist=5e6){
+med_gene <- function(p.trans, p.wgs, ref.table, candidate, target.fdr=0.1, dist=5e6, gene1.type = c('SNP','Gene'), SNP.ref = NULL){
 
   ##### Step 0: sample the candidate gene. #####
 
@@ -71,94 +77,194 @@ med_gene <- function(p.trans, p.wgs, ref.table, candidate, target.fdr=0.1, dist=
 
   M <- ncol(p.trans.new) # number of candidate gene 1
 
-  cat(paste0('\n-----Start DACT for ',M,' genes-----\n'))
+  if(gene1.type =='Gene'){
+    cat(paste0('\n-----Start DACT for ',M,' genes-----\n'))
 
-  for (i in 1:ncol(p.trans.new)) {
+    for (i in 1:ncol(p.trans.new)) {
 
-    gene1 = colnames(p.trans.new)[i]  # gene 1 name
+      gene1 = colnames(p.trans.new)[i]  # gene 1 name
 
-    if(gene1 %in% ref.table.keep$gene_name){ # if gene 1 in lincRNA or protein coding
+      if(gene1 %in% ref.table.keep$gene_name){ # if gene 1 in lincRNA or protein coding
 
-      pos.info <- ref.table.keep[ref.table.keep$gene_name==gene1,]  # position information for gene 1
-      start.pos <- pos.info$start
-      end.pos <- pos.info$end
-      chr <- pos.info$Chromosome
+        pos.info <- ref.table.keep[ref.table.keep$gene_name==gene1,]  # position information for gene 1
+        start.pos <- pos.info$start
+        end.pos <- pos.info$end
+        chr <- pos.info$Chromosome
 
-      start.critical <- start.pos - dist  # start position of critical region
-      end.critical <- end.pos + dist  # end position of critical region
+        start.critical <- start.pos - dist  # start position of critical region
+        end.critical <- end.pos + dist  # end position of critical region
 
-      target.genes <- ref.table[ref.table$Chromosome==chr,]  # genes on the same chromosome
+        target.genes <- ref.table[ref.table$Chromosome==chr,]  # genes on the same chromosome
 
-      loc.pos.1 <- which(target.genes$start>start.critical & target.genes$start<end.critical)  # genes whose start in critical region
-      loc.pos.2 <- which(target.genes$end>start.critical & target.genes$end<end.critical)  # genes whose end in critical region
-      loc.pos <- union(loc.pos.1, loc.pos.2)  # cis gene location
+        loc.pos.1 <- which(target.genes$start>start.critical & target.genes$start<end.critical)  # genes whose start in critical region
+        loc.pos.2 <- which(target.genes$end>start.critical & target.genes$end<end.critical)  # genes whose end in critical region
+        loc.pos <- union(loc.pos.1, loc.pos.2)  # cis gene location
 
-      gene.cis <- target.genes$gene_name[loc.pos] # cis gene name
+        gene.cis <- target.genes$gene_name[loc.pos] # cis gene name
 
-      gene.trans <- setdiff(common_gene2, gene.cis) # trans gene name
+        gene.trans <- setdiff(common_gene2, gene.cis) # trans gene name
 
 
-      ##### Step 3: DACT step #####
+        ##### Step 3: DACT step #####
 
-      p_a = p.trans.new[gene.trans, i]; names(p_a) <- gene.trans
-      p_b = p.wgs.new[gene.trans]; p_b[which(p_b==1)] <- 0.99
+        p_a = p.trans.new[gene.trans, i]; names(p_a) <- gene.trans
+        p_b = p.wgs.new[gene.trans]; p_b[which(p_b==1)] <- 0.99
 
-      Z_a = stats::qnorm(p_a,lower.tail = F)
-      Z_b = stats::qnorm(p_b,lower.tail = F)
+        Z_a = stats::qnorm(p_a,lower.tail = F)
+        Z_b = stats::qnorm(p_b,lower.tail = F)
 
-      pi0a = 1-nonnullPropEst(Z_a, 0, 1)
-      pi0b = 1-nonnullPropEst(Z_b, 0, 1)
+        pi0a = 1-nonnullPropEst(Z_a, 0, 1)
+        pi0b = 1-nonnullPropEst(Z_b, 0, 1)
 
-      if(is.na(pi0a)==FALSE & is.na(pi0b)==FALSE & pi0a>=0 & pi0b>=0){
+        if(is.na(pi0a)==FALSE & is.na(pi0b)==FALSE & pi0a>=0 & pi0b>=0){
 
-        if(pi0a > 1){pi0a = 1}
-        if(pi0b > 1){pi0b = 1}
+          if(pi0a > 1){pi0a = 1}
+          if(pi0b > 1){pi0b = 1}
 
-        p.mat = cbind(p_a,p_b)
-        p3 = (apply(p.mat,1,max))^2
-        wg1 = pi0a*(1-pi0b)
-        wg2 = (1-pi0a)*pi0b
-        wg3 = pi0a*pi0b
-        wg.sum = wg1 + wg2 + wg3
-        wg.std = c(wg1,wg2,wg3)/wg.sum
-        p_dact = wg.std[1]*p_a + wg.std[2]*p_b + wg.std[3]*p3
+          p.mat = cbind(p_a,p_b)
+          p3 = (apply(p.mat,1,max))^2
+          wg1 = pi0a*(1-pi0b)
+          wg2 = (1-pi0a)*pi0b
+          wg3 = pi0a*pi0b
+          wg.sum = wg1 + wg2 + wg3
+          wg.std = c(wg1,wg2,wg3)/wg.sum
+          p_dact = wg.std[1]*p_a + wg.std[2]*p_b + wg.std[3]*p3
 
-        s = try(qvalue(p_dact))
+          s = try(qvalue(p_dact))
 
-        if('try-error'%in% class(s)){
-          s = qvalue(p_dact, pi0=1)
+          if('try-error'%in% class(s)){
+            s = qvalue(p_dact, pi0=1)
+          }
+
+          q_dact = s$qvalues
+
+          names(q_dact) = gene.trans
+
+          vec = rep(0, length(rownames(p.trans.new)))  # vector of 0&1. 1 stands for significant gene 2 by DACT.
+
+          sig_dact = names(q_dact)[which(q_dact<=target.fdr)]
+
+          vec[rownames(p.trans.new)%in%sig_dact]=1
+
+          mat.sig[,i] <- vec
+
+          vec.p = rep(NA, length(rownames(p.trans.new)))
+
+          # vec.p[rownames(p.trans.new)%in%gene.trans] = p_dact
+          vec.p[match(gene.trans, rownames(p.trans.new))] = p_dact
+
+          mat.p[,i] <- vec.p
+
+          gene1.candidate = c(gene1.candidate, gene1)
+        }
+      }
+
+      if((i%%floor(M/100))==0){
+        percent = i%/%floor(M/100)
+        cat(paste0('\nComplete ',percent,'% genes!\n'))
+        cat(paste0('Number of Gene 1 detected: ', length(gene1.candidate), '\n'))
+      }
+
+    }
+  }
+  if(gene1.type == 'SNP'){
+
+        snp.candidate <- c()
+
+        cat(paste0('\n-----Start DACT for ',M,' SNPs-----\n'))
+
+        for (i in 1:ncol(p.trans.new)) {
+
+          cand.snp = colnames(p.trans.new)[i]  # gene 1 name
+
+          if(cand.snp %in% trans.p$SNP){ # if gene 1 in lincRNA or protein coding
+
+            pos.info <- trans.p[trans.p$SNP==cand.snp,]  # position information for gene 1
+            start.pos <- unique(pos.info$SNPPos)
+            end.pos <- unique(pos.info$SNPPos)
+            chr <- unique(pos.info$SNPChr)
+
+            chr = paste0('chr',chr)
+
+            start.critical <- start.pos - dist  # start position of critical region
+            end.critical <- end.pos + dist  # end position of critical region
+
+            target.genes <- ref.table[ref.table$Chromosome==chr,]  # genes on the same chromosome
+
+            loc.pos.1 <- which(target.genes$start>start.critical & target.genes$start<end.critical)  # genes whose start in critical region
+            loc.pos.2 <- which(target.genes$end>start.critical & target.genes$end<end.critical)  # genes whose end in critical region
+            loc.pos <- union(loc.pos.1, loc.pos.2)  # cis gene location
+
+            gene.cis <- target.genes$gene_name[loc.pos] # cis gene name
+
+            gene.trans <- setdiff(common_gene2, gene.cis) # trans gene name
+
+
+            ##### Step 3: DACT step #####
+
+            p_a = p.trans.new[gene.trans, i]; names(p_a) <- gene.trans
+            p_a[which(p_a==1)] <- 0.99
+            p_b = p.wgs.new[gene.trans]; p_b[which(p_b==1)] <- 0.99
+
+            Z_a = stats::qnorm(p_a,lower.tail = F)
+            Z_b = stats::qnorm(p_b,lower.tail = F)
+
+            pi0a = 1-nonnullPropEst(Z_a, 0, 1)
+            pi0b = 1-nonnullPropEst(Z_b, 0, 1)
+
+            if(is.na(pi0a)==FALSE & is.na(pi0b)==FALSE & pi0a>=0 & pi0b>=0){
+
+              if(pi0a > 1){pi0a = 1}
+              if(pi0b > 1){pi0b = 1}
+
+              p.mat = cbind(p_a,p_b)
+              p3 = (apply(p.mat,1,max))^2
+              wg1 = pi0a*(1-pi0b)
+              wg2 = (1-pi0a)*pi0b
+              wg3 = pi0a*pi0b
+              wg.sum = wg1 + wg2 + wg3
+              wg.std = c(wg1,wg2,wg3)/wg.sum
+              p_dact = wg.std[1]*p_a + wg.std[2]*p_b + wg.std[3]*p3
+
+
+
+              s = try(qvalue(p_dact))
+
+              if('try-error'%in% class(s)){
+                s = qvalue(p_dact, pi0=1)
+              }
+
+              q_dact = s$qvalues
+
+              names(q_dact) = gene.trans
+
+              vec = rep(0, length(rownames(p.trans.new)))  # vector of 0&1. 1 stands for significant gene 2 by DACT.
+
+              sig_dact = names(q_dact)[which(q_dact<=target.fdr)]
+
+              vec[rownames(p.trans.new)%in%sig_dact]=1
+
+              mat.sig[,i] <- vec
+
+              vec.p = rep(NA, length(rownames(p.trans.new)))
+
+              vec.p[match(gene.trans, rownames(p.trans.new))] = p_dact
+
+              mat.p[,i] <- vec.p
+
+              snp.candidate = c(snp.candidate, cand.snp)
+            }
+          }
+
+          if((i%%floor(M/100))==0){
+            percent = i%/%floor(M/100)
+            cat(paste0('\nComplete ',percent,'% SNPs!\n'))
+          }
+      }
+  gene1.candidate = snp.candidate
         }
 
-        q_dact = s$qvalues
 
-        names(q_dact) = gene.trans
-
-        vec = rep(0, length(rownames(p.trans.new)))  # vector of 0&1. 1 stands for significant gene 2 by DACT.
-
-        sig_dact = names(q_dact)[which(q_dact<=target.fdr)]
-
-        vec[rownames(p.trans.new)%in%sig_dact]=1
-
-        mat.sig[,i] <- vec
-
-        vec.p = rep(NA, length(rownames(p.trans.new)))
-
-        # vec.p[rownames(p.trans.new)%in%gene.trans] = p_dact
-        vec.p[match(gene.trans, rownames(p.trans.new))] = p_dact
-
-        mat.p[,i] <- vec.p
-
-        gene1.candidate = c(gene1.candidate, gene1)
-      }
-    }
-
-    if((i%%floor(M/100))==0){
-      percent = i%/%floor(M/100)
-      cat(paste0('\nComplete ',percent,'% genes!\n'))
-      cat(paste0('Number of Gene 1 detected: ', length(gene1.candidate), '\n'))
-    }
-
-  }
 
   return(list(gene1=gene1.candidate, mat.sig=mat.sig, mat.p=mat.p))
 }
@@ -179,7 +285,7 @@ med_gene <- function(p.trans, p.wgs, ref.table, candidate, target.fdr=0.1, dist=
 
 
 
-calc_pair.snp <- function(mat.sig, mat.p, p.wgs, gene1, uniq_snp, ref.table.keep, eta.wgs=1e-5, GRCh = NULL){
+calc_pair.snp <- function(mat.sig, mat.p, p.wgs, gene1, uniq_snp, ref.table.keep, eta.wgs=1e-5, GRCh = '17'){
 
   # mat.sig: matrix encoding significant pair, output by med_gene()
   # mat.p: matrix encoding COTA P-values, output by med_gene()
