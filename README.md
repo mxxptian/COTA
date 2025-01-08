@@ -21,6 +21,7 @@ devtools::install_github("mxxptian/COTA")
 
 # Example
 
+You can access the example code and data through: https://www.dropbox.com/scl/fo/b1r27fxqlq84ywory8qmo/ABRuFJpz1FIAy9vluMhLAMU?rlkey=n3pzgkdd0fqz9waamidlyfcfy&dl=0
 ```r
 library(qvalue)
 library(data.table)
