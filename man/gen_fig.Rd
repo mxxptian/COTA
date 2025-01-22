@@ -4,28 +4,20 @@
 \alias{gen_fig}
 \title{Generate figures of COTA's result}
 \usage{
-gen_fig(
-  gene.pair,
-  sig_gene2,
-  non_sig.gene2,
-  p.wgs,
-  eta.wgs = 1e-05,
-  conv.table,
-  pic_dir
-)
+gen_fig(gene.pair, p.wgs, eta.wgs = 1e-05, pic_dir)
 }
 \arguments{
 \item{gene.pair}{data frame of identified gene pair, output by calc_pair().}
-
-\item{sig_gene2}{gene 2 identified by COTA which are also TWAS significant genes, output by calc_pair().}
-
-\item{non_sig.gene2}{gene 2 identified by COTA which are NOT TWAS significant genes, output by calc_pair()}
 
 \item{p.wgs}{a vector of length K. p value for gene 2 -> trait. Both p.trans and p.wgs should contain the gene name.}
 
 \item{eta.wgs}{the significant threshold for TWAS gene}
 
 \item{pic_dir}{the directory to save figures}
+
+\item{sig_gene2}{gene 2 identified by COTA which are also TWAS significant genes, output by calc_pair().}
+
+\item{non_sig.gene2}{gene 2 identified by COTA which are NOT TWAS significant genes, output by calc_pair()}
 
 \item{conservation.score}{data.frame including the conservation scores which should contain columns: 1. 'pLI.score', 2. 'EDS', 3. 'RVIS', 4. 'GeneSymbol'}
 }

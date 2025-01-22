@@ -674,97 +674,10 @@ calc_pair.gene <- function(mat.sig, mat.p, p.wgs, gene1, ref.table.keep, eta.wgs
 #' @return a list includes identified pairs, combined pairs (loci based), identified core genes (also TWAS significant), and identified core genes (NOT TWAS significant)
 #' @export
 
-gen_fig = function(gene.pair, sig_gene2, non_sig.gene2, p.wgs, eta.wgs=1e-5, conv.table, pic_dir){
-
-
-  ########################### Conservation scores Figures #############################
-  cat(paste0('\nGenerating Figures----------------Conservation scores -----\n'))
-
-  conservation.score = data.frame(Enble.ID = conv.table$GeneSymbol,
-                                  pLI.score = conv.table$pLI, EDS = conv.table$EDS, RVIS = conv.table$RVIS)
-
-
-  ##### genes 2 are WES significant genes
-  cat('\n -----Bar plot of conservation scores for genes 2----- \n')
-
-  conservation.score = data.frame(Enble.ID = conv.table$GeneSymbol,
-                                  pLI.score = conv.table$pLI, EDS = conv.table$EDS, RVIS = conv.table$RVIS)
-
-
-  gene2.non_sig.id = ref.table[ref.table$gene_name%in%non_sig.gene2,]
-
-  gene2.non_sig.id = data.frame(Enble.ID = gene2.non_sig.id$gene_ID, name = gene2.non_sig.id$gene_name)
-
-  gene2.non_sig.conv = right_join(conservation.score, gene2.non_sig.id, by='Enble.ID')
-
-  gene2.non_sig.conv = na.omit(gene2.non_sig.conv)
+gen_fig = function(gene.pair, p.wgs, eta.wgs=1e-5,  pic_dir){
 
 
 
-  gene2.sig.id = ref.table[ref.table$gene_name%in%sig_gene2,]
-
-
-  gene2.sig.id = data.frame(Enble.ID = gene2.sig.id$gene_ID, name = gene2.sig.id$gene_name)
-
-  gene2.sig.cov = right_join(conservation.score, gene2.sig.id, by='Enble.ID')
-
-  gene2.sig.cov = na.omit(gene2.sig.cov)
-
-
-  red.gene2 = cbind(gene2.sig.cov, rep('sig_genes', nrow(gene2.sig.cov)))
-  blue.gene2 = cbind(gene2.non_sig.conv, rep('nonsig_genes', nrow(gene2.non_sig.conv)))
-  #
-  names(red.gene2) = c('Enble.ID', 'pLI.score', 'EDS', 'RVIS', 'name', 'type')
-  names(blue.gene2) = c('Enble.ID', 'pLI.score', 'EDS', 'RVIS', 'name', 'type')
-
-  red.gene2$pLI.score = as.numeric(unlist(red.gene2$pLI.score))
-  red.gene2$RVIS = as.numeric(unlist(red.gene2$RVIS))
-  blue.gene2$pLI.score = as.numeric(unlist(blue.gene2$pLI.score))
-  blue.gene2$RVIS = as.numeric(unlist(blue.gene2$RVIS))
-  #
-  df_gene2 = rbind(red.gene2, blue.gene2)
-
-  data_summary <- function(data, varname, groupnames){
-    require(plyr)
-    summary_func <- function(x, col){
-      c(mean = mean(x[[col]], na.rm=TRUE),
-        sd = sd(x[[col]], na.rm=TRUE)/sqrt(length(na.omit(x[[col]]))))
-    }
-    data_sum<-ddply(data, groupnames, .fun=summary_func,
-                    varname)
-    data_sum <- rename(data_sum, c("mean" = varname))
-    return(data_sum)
-  }
-
-
-
-  if(length(sig_gene2)!=0 & length(non_sig.gene2)!=0){
-
-    for (i in c('RVIS', 'pLI.score', 'EDS')) {
-      summary_gene2 <- data_summary(df_gene2, varname= i,
-                                    groupnames=c("type"))
-      # Convert dose to a factor variable
-      summary_gene2$type=as.factor(summary_gene2$type)
-      # head(summary_gene2)
-      write.table(summary_gene2, paste0(pic_dir, '/',
-                                        i, '_scores_gene2.txt', sep=" "))
-      colnames(summary_gene2) = c('type', 'mean', 'sd')
-
-      plot <- ggplot2::ggplot(summary_gene2, aes(x=type, y=mean, fill=type)) +
-        geom_bar(stat="identity", position=position_dodge()) +
-        geom_errorbar(aes(ymin= mean-sd, ymax= mean +sd), width=.2,
-                      position=position_dodge(.9))+
-        scale_fill_manual(values=c('#9bd6e5','#e0879c'))+
-        ylab(i)
-      ggplot2::ggsave(paste0(pic_dir,  '/',
-                    i," scores histogram of genes 2.png",sep=""))
-
-      # dev.off()
-    }
-  }
-
-  ########################### Venn Plot #############################
-  cat('\n -----Venn Plot for TWAS genes and COTA genes----- \n')
 
 
   imp = which(p.wgs<=eta.wgs) #total number of TWAS significant genes 383
@@ -775,32 +688,6 @@ gen_fig = function(gene.pair, sig_gene2, non_sig.gene2, p.wgs, eta.wgs=1e-5, con
   data = data.frame(gene = c(twas.imp, na.omit(unique(gene.pair[,"gene2"]))),
                     category = c(rep('TWAS_Genes', length(twas.imp)), rep('COTA_Genes', length(na.omit(unique(gene.pair[,"gene2"]))))))
 
-  venn.diagram(
-    x = list(
-      data %>% filter(category=="TWAS_Genes") %>% dplyr::select(gene) %>% unlist() ,
-      data %>% filter(category=="COTA_Genes") %>% dplyr::select(gene) %>% unlist()
-    ),
-    category.names = c("TWAS Genes" , "Identified Mediators" ),
-    filename = 'TWAS_COTA.png',
-    output = FALSE ,
-    imagetype="png" ,
-    height = 480 ,
-    width = 480 ,
-    resolution = 300,
-    compression = "lzw",
-    lwd = 1,
-    col=c('#21908dff', "#440154ff"),
-    fill = c(alpha('#21908dff',0.3), alpha("#440154ff",0.3)),
-    cex = 0.5,
-    fontfamily = "sans",
-    cat.cex = 0.3,
-    # cat.default.pos = "outer",
-    cat.pos = c(-27, 27),
-    cat.dist = c (0.055, 0.055),
-    cat.fontfamily = "sans",
-    cat.col = c('#21908dff', "#440154ff")#,
-    # rotation = 1
-  )
 
 
   ############################# Network visualization ####################
