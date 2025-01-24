@@ -6,7 +6,7 @@
 \usage{
 med_gene(
   p.trans,
-  p.wgs,
+  p.wes,
   ref.table,
   candidate,
   target.fdr = 0.1,
@@ -18,7 +18,7 @@ med_gene(
 \arguments{
 \item{p.trans}{p value for trans genes. M*N dim matrix. There are M rows for gene 2. N columns for gene 1. Each entry is the p-value of gene 1 -> gene 2.}
 
-\item{p.wgs}{a vector of length K. p value for gene 2 -> trait. Both p.trans and p.wgs should contain the gene name.}
+\item{p.wes}{a vector of length K. p value for gene 2 -> trait. Both p.trans and p.wes should contain the gene name.}
 
 \item{ref.table}{reference data for position information.}
 
@@ -40,5 +40,5 @@ shoud contain three columns:
 A list of candidate genes 1, identified pair matrix, and COTA's p-values
 }
 \description{
-Apply COTA using p-values from TWAS and eQTLGen data to generate COTA's p-values and identified pairs.
+Apply COTA using p-values from WES and eQTLGen data to generate COTA's p-values and identified pairs.
 }

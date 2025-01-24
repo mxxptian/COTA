@@ -239,6 +239,6 @@ pic_dir = '/Users/px/Desktop/test/example/'
 
 
 
-gen_fig(result.pair$gene.pair,  p.wgs, eta.wgs=1e-5, pic_dir)
+gen_fig(result.pair$gene.pair, result.pair$sig_gene2, result.pair$non_sig.gene2, p.wgs, eta.wgs=1e-5, conv.table, pic_dir)
 
 ```

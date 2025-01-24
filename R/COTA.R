@@ -1,7 +1,7 @@
 #' @title Apply COTA to identify candidate core genes.
-#' @description Apply COTA using p-values from TWAS and eQTLGen data to generate COTA's p-values and identified pairs.
+#' @description Apply COTA using p-values from WES and eQTLGen data to generate COTA's p-values and identified pairs.
 #' @param p.trans p value for trans genes. M*N dim matrix. There are M rows for gene 2. N columns for gene 1. Each entry is the p-value of gene 1 -> gene 2.
-#' @param p.wgs a vector of length K. p value for gene 2 -> trait. Both p.trans and p.wgs should contain the gene name.
+#' @param p.wes a vector of length K. p value for gene 2 -> trait. Both p.trans and p.wes should contain the gene name.
 #' @param candidate vector of candidate gene name (for gene 1) which should be the subset of colnames of p.trans
 #' @param ref.table reference data for position information.
 # should contain five columns:
@@ -24,7 +24,7 @@
 
 
 
-med_gene <- function(p.trans, p.wgs, ref.table, candidate, target.fdr=0.1, dist=5e6, gene1.type = c('SNP','Gene'), SNP.ref = NULL){
+med_gene <- function(p.trans, p.wes, ref.table, candidate, target.fdr=0.1, dist=5e6, gene1.type = c('SNP','Gene'), SNP.ref = NULL){
 
   ##### Step 0: sample the candidate gene. #####
 
@@ -34,8 +34,8 @@ med_gene <- function(p.trans, p.wgs, ref.table, candidate, target.fdr=0.1, dist=
 
   cat('\n-----Start matching gene 2-----\n')
 
-  ## match gene 2 of p.trans and p.wgs
-  common_gene2 <- intersect(rownames(p.trans), names(p.wgs))
+  ## match gene 2 of p.trans and p.wes
+  common_gene2 <- intersect(rownames(p.trans), names(p.wes))
 
   ## keep only lincRNA and protein coding genes
   ref.table.keep <- ref.table[ref.table$type %in% c('lincRNA', 'protein_coding'),]
@@ -53,11 +53,11 @@ med_gene <- function(p.trans, p.wgs, ref.table, candidate, target.fdr=0.1, dist=
   ## keep common gene2 for p.trans
   p.trans.new <- p.trans[rownames(p.trans)%in%common_gene2,]
 
-  ## keep common gene2 for p.wgs
-  p.wgs.new <- p.wgs[names(p.wgs)%in%common_gene2]
+  ## keep common gene2 for p.wes
+  p.wes.new <- p.wes[names(p.wes)%in%common_gene2]
 
-  ## reorder p.trans.new and p.wgs.new
-  p.trans.new <- p.trans.new[match(names(p.wgs.new), rownames(p.trans.new)),]
+  ## reorder p.trans.new and p.wes.new
+  p.trans.new <- p.trans.new[match(names(p.wes.new), rownames(p.trans.new)),]
 
   cat('\n-----End matching gene 2-----\n')
 
@@ -108,7 +108,7 @@ med_gene <- function(p.trans, p.wgs, ref.table, candidate, target.fdr=0.1, dist=
         ##### Step 3: DACT step #####
 
         p_a = p.trans.new[gene.trans, i]; names(p_a) <- gene.trans
-        p_b = p.wgs.new[gene.trans]; p_b[which(p_b==1)] <- 0.99
+        p_b = p.wes.new[gene.trans]; p_b[which(p_b==1)] <- 0.99
 
         Z_a = stats::qnorm(p_a,lower.tail = F)
         Z_b = stats::qnorm(p_b,lower.tail = F)
@@ -204,7 +204,7 @@ med_gene <- function(p.trans, p.wgs, ref.table, candidate, target.fdr=0.1, dist=
 
             p_a = p.trans.new[gene.trans, i]; names(p_a) <- gene.trans
             p_a[which(p_a==1)] <- 0.99
-            p_b = p.wgs.new[gene.trans]; p_b[which(p_b==1)] <- 0.99
+            p_b = p.wes.new[gene.trans]; p_b[which(p_b==1)] <- 0.99
 
             Z_a = stats::qnorm(p_a,lower.tail = F)
             Z_b = stats::qnorm(p_b,lower.tail = F)
@@ -270,22 +270,22 @@ med_gene <- function(p.trans, p.wgs, ref.table, candidate, target.fdr=0.1, dist=
 }
 
 
-#' @title Cleanse the pairs and core genes identified by COTA and map the core genes to TWAS significant genes (FOR genes 1 is SNPs)
+#' @title Cleanse the pairs and core genes identified by COTA and map the core genes to WES significant genes (FOR genes 1 is SNPs)
 #' @description Organize the output results of med_gene() and merge nearby genes into a single locus.
 #' @param mat.sig matrix encoding significant pair, output by med_gene().
 #' @param mat.p matrix encoding COTA P-values, output by med_gene()
 #' @param gene1 candidate SNPs names used for analysis, output by med_gene()
 #' @param uniq_snp matrix should contains columns about the snp (named as 'SNP') and the corresponding significant cis gene name (named as 'GeneSymbol')
-#' @param p.wgs a vector of length K. p value for gene 2 -> trait. Both p.trans and p.wgs should contain the gene name.
+#' @param p.wes a vector of length K. p value for gene 2 -> trait. Both p.trans and p.wes should contain the gene name.
 #' @param ref.table.keep reference data for position information for 'lincRNA' and 'protein_coding' which are not located in 'chrX', 'chrY' and 'chrM'.
-#' @param eta.wgs the significant threshold for TWAS gene
+#' @param eta.wgs the significant threshold for WES gene
 #'
-#' @return a list includes identified pairs, combined pairs (loci based), identified core genes (also TWAS significant), and identified core genes (NOT TWAS significant)
+#' @return a list includes identified pairs, combined pairs (loci based), identified core genes (also WES significant), and identified core genes (NOT WES significant)
 #' @export
 
 
 
-calc_pair.snp <- function(mat.sig, mat.p, p.wgs, gene1, uniq_snp, ref.table.keep, eta.wgs=1e-5, GRCh = '17'){
+calc_pair.snp <- function(mat.sig, mat.p, p.wes, gene1, uniq_snp, ref.table.keep, eta.wgs=1e-5, GRCh = '37'){
 
   # mat.sig: matrix encoding significant pair, output by med_gene()
   # mat.p: matrix encoding COTA P-values, output by med_gene()
@@ -322,7 +322,35 @@ calc_pair.snp <- function(mat.sig, mat.p, p.wgs, gene1, uniq_snp, ref.table.keep
     }
   }
 
-  pairs_dact$wgs_gene2 <- p.wgs[match(pairs_dact$gene2, names(p.wgs))]
+  pairs_dact$wgs_gene2 <- p.wes[match(pairs_dact$gene2, names(p.wes))]
+
+    ####### check the genome build of gene position file
+
+    gene_test = ref.table.keep$gene_name[1]
+
+    grch_gene = get_gene(gene_test)
+
+    gene_sta = grch_gene$gene_start
+
+    if(gene_sta==ref.table.keep[ref.table.keep$gene_name==gene_test$gene_symbol,'start']){
+      cat('Gene positions are from GRCH 38!')
+      gene_grch = 38
+      if(GRCh!=gene_grch){
+
+        cat('Warning: The SNP and gene positions are from different genome builds!!! Please correct it!!!')
+      }else{
+        cat('The SNP and gene positions are from the same genome builds.')
+      }
+    }else{
+      cat('Gene positions are from GRCH 37!')
+      gene_grch = 37
+      if(GRCh!=gene_grch){
+
+        cat('Warning: The SNP and gene positions are from different genome builds!!! Please correct it!!!')
+      }else{
+        cat('The SNP and gene positions are from the same genome builds.')
+      }
+    }
 
     ########################## match snp with gene ##############################
 
@@ -355,6 +383,8 @@ calc_pair.snp <- function(mat.sig, mat.p, p.wgs, gene1, uniq_snp, ref.table.keep
 
 
     SNP.uniq = SNPs[!is.na(as.numeric(SNPs$chr_name)),]
+
+
 
     for (i in 1:nrow(SNP.uniq)) {
       rs.map = SNP.uniq[i,]
@@ -481,7 +511,7 @@ calc_pair.snp <- function(mat.sig, mat.p, p.wgs, gene1, uniq_snp, ref.table.keep
 
     gene2 = gene.pair[,"wgs_gene2"]
 
-    imp.var = names(p.wgs)[p.wgs<=threshold]
+    imp.var = names(p.wes)[p.wes<=threshold]
 
 
     sig_gene2 = gene.pair[which(gene2<threshold),"gene2"]
@@ -499,21 +529,21 @@ calc_pair.snp <- function(mat.sig, mat.p, p.wgs, gene1, uniq_snp, ref.table.keep
 }
 
 
-#' @title Cleanse the pairs and core genes identified by COTA and map the core genes to TWAS significant genes (FOR genes 1 is gene.)
+#' @title Cleanse the pairs and core genes identified by COTA and map the core genes to WES significant genes (FOR genes 1 is gene.)
 #' @description Organize the output results of med_gene() and merge nearby genes into a single locus.
 #' @param mat.sig matrix encoding significant pair, output by med_gene().
 #' @param mat.p matrix encoding COTA P-values, output by med_gene()
 #' @param gene1 gene 1 names used for analysis, output by med_gene()
-#' @param p.wgs a vector of length K. p value for gene 2 -> trait. Both p.trans and p.wgs should contain the gene name.
+#' @param p.wes a vector of length K. p value for gene 2 -> trait. Both p.trans and p.wes should contain the gene name.
 #' @param ref.table.keep reference data for position information for 'lincRNA' and 'protein_coding' which are not located in 'chrX', 'chrY' and 'chrM'.
-#' @param eta.wgs the significant threshold for TWAS gene
+#' @param eta.wgs the significant threshold for WES gene
 #'
-#' @return a list includes identified pairs, combined pairs (loci based), identified core genes (also TWAS significant), and identified core genes (NOT TWAS significant)
+#' @return a list includes identified pairs, combined pairs (loci based), identified core genes (also WES significant), and identified core genes (NOT WES significant)
 #' @export
 
 
 
-calc_pair.gene <- function(mat.sig, mat.p, p.wgs, gene1, ref.table.keep, eta.wgs=1e-5){
+calc_pair.gene <- function(mat.sig, mat.p, p.wes, gene1, ref.table.keep, eta.wgs=1e-5){
 
   # mat.sig: matrix encoding significant pair, output by med_gene()
   # mat.p: matrix encoding COTA P-values, output by med_gene()
@@ -550,7 +580,7 @@ calc_pair.gene <- function(mat.sig, mat.p, p.wgs, gene1, ref.table.keep, eta.wgs
     }
   }
 
-  pairs_dact$wgs_gene2 <- p.wgs[match(pairs_dact$gene2, names(p.wgs))]
+  pairs_dact$wgs_gene2 <- p.wes[match(pairs_dact$gene2, names(p.wes))]
 
 
 
@@ -641,7 +671,7 @@ calc_pair.gene <- function(mat.sig, mat.p, p.wgs, gene1, ref.table.keep, eta.wgs
 
   gene2 = gene.pair[,"wgs_gene2"]
 
-  imp.var = names(p.wgs)[p.wgs<=threshold]
+  imp.var = names(p.wes)[p.wes<=threshold]
 
 
   sig_gene2 = gene.pair[which(gene2<threshold),"gene2"]
@@ -664,29 +694,29 @@ calc_pair.gene <- function(mat.sig, mat.p, p.wgs, gene1, ref.table.keep, eta.wgs
 #' @title Generate figures of COTA's result
 #' @description Generate analysis plots related to COTA results
 #' @param gene.pair data frame of identified gene pair, output by calc_pair().
-#' @param sig_gene2 gene 2 identified by COTA which are also TWAS significant genes, output by calc_pair().
-#' @param non_sig.gene2 gene 2 identified by COTA which are NOT TWAS significant genes, output by calc_pair()
+#' @param sig_gene2 gene 2 identified by COTA which are also WES significant genes, output by calc_pair().
+#' @param non_sig.gene2 gene 2 identified by COTA which are NOT WES significant genes, output by calc_pair()
 #' @param conservation.score data.frame including the conservation scores which should contain columns: 1. 'pLI.score', 2. 'EDS', 3. 'RVIS', 4. 'GeneSymbol'
 #' @param pic_dir the directory to save figures
-#' @param p.wgs a vector of length K. p value for gene 2 -> trait. Both p.trans and p.wgs should contain the gene name.
-#' @param eta.wgs the significant threshold for TWAS gene
+#' @param p.wes a vector of length K. p value for gene 2 -> trait. Both p.trans and p.wes should contain the gene name.
+#' @param eta.wgs the significant threshold for WES gene
 #'
-#' @return a list includes identified pairs, combined pairs (loci based), identified core genes (also TWAS significant), and identified core genes (NOT TWAS significant)
+#' @return a list includes identified pairs, combined pairs (loci based), identified core genes (also WES significant), and identified core genes (NOT WES significant)
 #' @export
 
-gen_fig = function(gene.pair, p.wgs, eta.wgs=1e-5,  pic_dir){
+gen_fig = function(gene.pair, p.wes, eta.wgs=1e-5,  pic_dir){
 
 
 
 
 
-  imp = which(p.wgs<=eta.wgs) #total number of TWAS significant genes 383
+  imp = which(p.wes<=eta.wgs) #total number of WES significant genes 383
 
-  twas.imp = names(p.wgs)[imp] #383
+  WES.imp = names(p.wes)[imp] #383
 
 
-  data = data.frame(gene = c(twas.imp, na.omit(unique(gene.pair[,"gene2"]))),
-                    category = c(rep('TWAS_Genes', length(twas.imp)), rep('COTA_Genes', length(na.omit(unique(gene.pair[,"gene2"]))))))
+  data = data.frame(gene = c(WES.imp, na.omit(unique(gene.pair[,"gene2"]))),
+                    category = c(rep('WES_Genes', length(WES.imp)), rep('COTA_Genes', length(na.omit(unique(gene.pair[,"gene2"]))))))
 
 
 
@@ -716,12 +746,12 @@ gen_fig = function(gene.pair, p.wgs, eta.wgs=1e-5,  pic_dir){
 
   node.g1 = unique(c(result.pair[,'region'], result.pair[, 'gene2']))
 
-  colored_gene = node.g1[node.g1%in%twas.imp]
+  colored_gene = node.g1[node.g1%in%WES.imp]
 
 
   net.g1 <- graph_from_data_frame(d=result.pair[,c('region','gene2')], vertices=node.g1, directed=T)
   V(net.g1)$type = rep('Not', length(node.g1))
-  V(net.g1)$type[which(node.g1%in%twas.imp)] = rep('Important', length(which(node.g1%in%twas.imp)))
+  V(net.g1)$type[which(node.g1%in%WES.imp)] = rep('Important', length(which(node.g1%in%WES.imp)))
 
 
   E(net.g1)$type = rep('Not', length(E(net.g1)))

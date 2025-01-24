@@ -2,17 +2,17 @@
 % Please edit documentation in R/COTA.R
 \name{calc_pair.snp}
 \alias{calc_pair.snp}
-\title{Cleanse the pairs and core genes identified by COTA and map the core genes to TWAS significant genes (FOR genes 1 is SNPs)}
+\title{Cleanse the pairs and core genes identified by COTA and map the core genes to WES significant genes (FOR genes 1 is SNPs)}
 \usage{
 calc_pair.snp(
   mat.sig,
   mat.p,
-  p.wgs,
+  p.wes,
   gene1,
   uniq_snp,
   ref.table.keep,
   eta.wgs = 1e-05,
-  GRCh = "17"
+  GRCh = "37"
 )
 }
 \arguments{
@@ -20,7 +20,7 @@ calc_pair.snp(
 
 \item{mat.p}{matrix encoding COTA P-values, output by med_gene()}
 
-\item{p.wgs}{a vector of length K. p value for gene 2 -> trait. Both p.trans and p.wgs should contain the gene name.}
+\item{p.wes}{a vector of length K. p value for gene 2 -> trait. Both p.trans and p.wes should contain the gene name.}
 
 \item{gene1}{candidate SNPs names used for analysis, output by med_gene()}
 
@@ -28,10 +28,10 @@ calc_pair.snp(
 
 \item{ref.table.keep}{reference data for position information for 'lincRNA' and 'protein_coding' which are not located in 'chrX', 'chrY' and 'chrM'.}
 
-\item{eta.wgs}{the significant threshold for TWAS gene}
+\item{eta.wgs}{the significant threshold for WES gene}
 }
 \value{
-a list includes identified pairs, combined pairs (loci based), identified core genes (also TWAS significant), and identified core genes (NOT TWAS significant)
+a list includes identified pairs, combined pairs (loci based), identified core genes (also WES significant), and identified core genes (NOT WES significant)
 }
 \description{
 Organize the output results of med_gene() and merge nearby genes into a single locus.
