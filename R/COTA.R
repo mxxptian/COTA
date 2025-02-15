@@ -297,17 +297,6 @@ calc_pair.snp <- function(mat.sig, mat.p, p.wes, gene1, uniq_snp, ref.table.keep
 
   mat.sig.new <- mat.sig[,gene1] # only consider gene 1 included in analysis
 
-  mat.sig.new <- mat.sig.new[rowSums(mat.sig.new)!=0,colSums(mat.sig.new)!=0]
-
-  cat(paste0('\nRemoving self-connected genes\n'))
-
-  for (i in 1:nrow(mat.sig.new)) {
-    for (j in 1:ncol(mat.sig.new)) {
-      if(rownames(mat.sig.new)[i]==colnames(mat.sig.new)[j]){
-        mat.sig.new[i,j] = 0
-      }
-    }
-  }
 
   mat.sig.new <- mat.sig.new[rowSums(mat.sig.new)!=0,colSums(mat.sig.new)!=0]
 
@@ -332,7 +321,7 @@ calc_pair.snp <- function(mat.sig, mat.p, p.wes, gene1, uniq_snp, ref.table.keep
 
     gene_sta = grch_gene$gene_start
 
-    if(gene_sta==ref.table.keep[ref.table.keep$gene_name==gene_test$gene_symbol,'start']){
+    if(gene_sta==ref.table.keep[ref.table.keep$gene_name==gene_test,'start']){
       cat('Gene positions are from GRCH 38!')
       gene_grch = 38
       if(GRCh!=gene_grch){
@@ -367,58 +356,62 @@ calc_pair.snp <- function(mat.sig, mat.p, p.wes, gene1, uniq_snp, ref.table.keep
 
     ####### if there is no signficiant cis gene for the snps
 
-    non_cis = pairs_dact[which(is.na(pairs_dact$cis_gene1)),'gene1']
+    
+    if(length(non_cis)==0){
+      cat('All the candidate genes 1 are significant cis genes!')
+    }else{
 
-    # library("biomaRt")
+      #get genomic position
 
-
-
-    #get genomic position
-    SNPs <- getBM(attributes=c("refsnp_id",
-                               "chr_name",
-                               "chrom_start",
-                               "chrom_end"),
-                  filters ="snp_filter", values =non_cis, mart = ensembl, uniqueRows=TRUE)
-
-
-
-    SNP.uniq = SNPs[!is.na(as.numeric(SNPs$chr_name)),]
+      cat('There are some insignificant cis genes 1!')
+      SNPs <- getBM(attributes=c("refsnp_id",
+                                 "chr_name",
+                                 "chrom_start",
+                                 "chrom_end"),
+                    filters ="snp_filter", values =non_cis, mart = ensembl, uniqueRows=TRUE)
 
 
 
-    for (i in 1:nrow(SNP.uniq)) {
-      rs.map = SNP.uniq[i,]
+      SNP.uniq = SNPs[!is.na(as.numeric(SNPs$chr_name)),]
 
-      gene.pos = ref.table.keep[ref.table.keep$Chromosome==paste0('chr',rs.map$chr_name),]
 
-      loc.gene1 = which(gene.pos$start<rs.map$chrom_start&gene.pos$end>rs.map$chrom_start)
 
-      # print(length(loc.gene1))
 
-      if(length(loc.gene1)==1){
-        idx = which( pairs_dact$gene1==rs.map$refsnp_id)
+      for (i in 1:nrow(SNP.uniq)) {
+        rs.map = SNP.uniq[i,]
 
-        pairs_dact$cis_gene1[idx] = gene.pos[loc.gene1,'gene_name']
-      }else{
-        gene.pos$start.diff = abs(gene.pos$start-rs.map$chrom_start)
-        gene.pos$end.diff = abs(gene.pos$end-rs.map$chrom_start)
-        if(min(gene.pos$start.diff)< min(gene.pos$end.diff)){
+        gene.pos = ref.table.keep[ref.table.keep$Chromosome==paste0('chr',rs.map$chr_name),]
 
+        loc.gene1 = which(gene.pos$start<rs.map$chrom_start&gene.pos$end>rs.map$chrom_start)
+
+        # print(length(loc.gene1))
+
+        if(length(loc.gene1)==1){
           idx = which( pairs_dact$gene1==rs.map$refsnp_id)
 
-          idx.gene = which(gene.pos$start.diff==min(gene.pos$start.diff))
-
-          pairs_dact$cis_gene1[idx] = gene.pos[idx.gene,'gene_name']
+          pairs_dact$cis_gene1[idx] = gene.pos[loc.gene1,'gene_name']
         }else{
-          idx = which( pairs_dact$gene1==rs.map$refsnp_id)
+          gene.pos$start.diff = abs(gene.pos$start-rs.map$chrom_start)
+          gene.pos$end.diff = abs(gene.pos$end-rs.map$chrom_start)
+          if(min(gene.pos$start.diff)< min(gene.pos$end.diff)){
 
-          idx.gene = which(gene.pos$end.diff==min(gene.pos$end.diff))
+            idx = which( pairs_dact$gene1==rs.map$refsnp_id)
 
-          pairs_dact$cis_gene1[idx] = gene.pos[idx.gene,'gene_name']
+            idx.gene = which(gene.pos$start.diff==min(gene.pos$start.diff))
+
+            pairs_dact$cis_gene1[idx] = gene.pos[idx.gene,'gene_name']
+          }else{
+            idx = which( pairs_dact$gene1==rs.map$refsnp_id)
+
+            idx.gene = which(gene.pos$end.diff==min(gene.pos$end.diff))
+
+            pairs_dact$cis_gene1[idx] = gene.pos[idx.gene,'gene_name']
+          }
         }
-      }
 
+      }
     }
+
 
     colnames( pairs_dact) = c('rsid', "gene2",  "COTA_p", 'wgs_gene2',  "gene1")
 
