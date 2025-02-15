@@ -322,22 +322,22 @@ calc_pair.snp <- function(mat.sig, mat.p, p.wes, gene1, uniq_snp, ref.table.keep
     gene_sta = grch_gene$gene_start
 
     if(gene_sta==ref.table.keep[ref.table.keep$gene_name==gene_test,'start']){
-      cat('Gene positions are from GRCH 38!')
+      cat('\nGene positions are from GRCH 38!\n')
       gene_grch = 38
       if(GRCh!=gene_grch){
 
-        cat('Warning: The SNP and gene positions are from different genome builds!!! Please correct it!!!')
+        cat('\nWarning: The SNP and gene positions are from different genome builds!!! Please correct it!!!\n')
       }else{
-        cat('The SNP and gene positions are from the same genome builds.')
+        cat('\nThe SNP and gene positions are from the same genome builds\n')
       }
     }else{
-      cat('Gene positions are from GRCH 37!')
+      cat('\nGene positions are from GRCH 37!\n')
       gene_grch = 37
       if(GRCh!=gene_grch){
 
-        cat('Warning: The SNP and gene positions are from different genome builds!!! Please correct it!!!')
+        cat('\nWarning: The SNP and gene positions are from different genome builds!!! Please correct it!!!\n')
       }else{
-        cat('The SNP and gene positions are from the same genome builds.')
+        cat('\nThe SNP and gene positions are from the same genome builds.\n')
       }
     }
 
@@ -358,12 +358,12 @@ calc_pair.snp <- function(mat.sig, mat.p, p.wes, gene1, uniq_snp, ref.table.keep
 
     
     if(length(non_cis)==0){
-      cat('All the candidate genes 1 are significant cis genes!')
+      cat('\nAll the candidate genes 1 are significant cis genes!\n')
     }else{
 
       #get genomic position
 
-      cat('There are some insignificant cis genes 1!')
+      cat('\nThere are some insignificant cis genes 1\n!')
       SNPs <- getBM(attributes=c("refsnp_id",
                                  "chr_name",
                                  "chrom_start",
